@@ -124,12 +124,6 @@ public class ROIGeometry extends ROI {
     private final static PrecisionModel FLOAT_PRECISION = new PrecisionModel(PrecisionModel.FLOATING_SINGLE);
     private final static GeometryFactory FLOAT_PRECISION_FACTORY = new GeometryFactory(FLOAT_PRECISION);
 
-    private final CoordinateSequence2D testPointCS;
-    private final com.vividsolutions.jts.geom.Point testPoint;
-    
-    private final CoordinateSequence2D testRectCS;
-    private final Polygon testRect;
-    
     private RenderingHints hints;
 
     /**
@@ -270,12 +264,6 @@ public class ROIGeometry extends ROI {
         }
         
         theGeom = PreparedGeometryFactory.prepare(cloned);
-        
-        testPointCS = new CoordinateSequence2D(1);
-        testPoint = geomFactory.createPoint(testPointCS);
-
-        testRectCS = new CoordinateSequence2D(5);
-        testRect = geomFactory.createPolygon(geomFactory.createLinearRing(testRectCS), null);
     }
 
     /**
@@ -354,9 +342,10 @@ public class ROIGeometry extends ROI {
      */
     @Override
     public boolean contains(double x, double y) {
+        CoordinateSequence2D testPointCS = new CoordinateSequence2D(1);
+        com.vividsolutions.jts.geom.Point testPoint = geomFactory.createPoint(testPointCS);
         testPointCS.setX(0, x);
         testPointCS.setY(0, y);
-        testPoint.geometryChanged();
         return theGeom.intersects(testPoint);
     }
 
@@ -413,8 +402,21 @@ public class ROIGeometry extends ROI {
      */
     @Override
     public boolean contains(double x, double y, double w, double h) {
-        setTestRect(x, y, w, h);
+        Polygon testRect = getTestRect(x, y, w, h);
+        
         return theGeom.contains(testRect);
+    }
+
+    private Polygon getTestRect(double x, double y, double w, double h) {
+        CoordinateSequence2D testRectCS = new CoordinateSequence2D(5);
+        Polygon testRect = geomFactory.createPolygon(geomFactory.createLinearRing(testRectCS), null);
+        testRectCS.setXY(0, x, y);
+        testRectCS.setXY(1, x, y + h);
+        testRectCS.setXY(2, x + w, y + h);
+        testRectCS.setXY(3, x + w, y);
+        testRectCS.setXY(4, x, y);
+        testRect.geometryChanged();
+        return testRect;
     }
 
     /**
@@ -608,7 +610,7 @@ public class ROIGeometry extends ROI {
      */
     @Override
     public boolean intersects(Rectangle rect) {
-        setTestRect(rect.x, rect.y, rect.width, rect.height);
+        Polygon testRect = getTestRect(rect.x, rect.y, rect.width, rect.height);
         return theGeom.intersects(testRect);
     }
 
@@ -620,7 +622,7 @@ public class ROIGeometry extends ROI {
      */
     @Override
     public boolean intersects(Rectangle2D rect) {
-        setTestRect(rect.getMinX(), rect.getMinY(), rect.getWidth(), rect.getHeight());
+        Polygon testRect = getTestRect(rect.getMinX(), rect.getMinY(), rect.getWidth(), rect.getHeight());
         return theGeom.intersects(testRect);
     }
 
@@ -635,7 +637,7 @@ public class ROIGeometry extends ROI {
      */
     @Override
     public boolean intersects(int x, int y, int w, int h) {
-        setTestRect(x, y, w, h);
+        Polygon testRect = getTestRect(x, y, w, h);
         return theGeom.intersects(testRect);
     }
 
@@ -650,7 +652,7 @@ public class ROIGeometry extends ROI {
      */
     @Override
     public boolean intersects(double x, double y, double w, double h) {
-        setTestRect(x, y, w, h);
+        Polygon testRect = getTestRect(x, y, w, h);
         return theGeom.intersects(testRect);
     }
 
@@ -733,23 +735,6 @@ public class ROIGeometry extends ROI {
         return buildROIGeometry(cloned);
     }
 
-    /**
-     * Helper function for contains and intersects methods.
-     * 
-     * @param x rectangle origin X ordinate
-     * @param y rectangle origin Y ordinate
-     * @param w rectangle width
-     * @param h rectangle height
-     */
-    private void setTestRect(double x, double y, double w, double h) {
-        testRectCS.setXY(0, x, y);
-        testRectCS.setXY(1, x, y + h);
-        testRectCS.setXY(2, x + w, y + h);
-        testRectCS.setXY(3, x + w, y);
-        testRectCS.setXY(4, x, y);
-        testRect.geometryChanged();
-    }
-    
     /**
      * Setup a ROIGeometry on top of a geometry.
      * It takes care of removing invalid polygon, opened line strings and so on

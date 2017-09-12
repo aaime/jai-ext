@@ -45,8 +45,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import javax.media.jai.ImageLayout;
 import javax.media.jai.JAI;
@@ -867,6 +869,35 @@ public class ROIGeometryTest extends TestBase {
         ROIShape rs = new ROIShape(new Rectangle(0, 0, 100, 100));
         assertTrue(rg.contains(0, 0));
         assertTrue(rs.contains(0, 0));
+    }
+    
+    @Test
+    public void testMultiThreaded() throws InterruptedException, ExecutionException {
+        final ROIGeometry rg = createRectROI(0, 0, 100, 100);
+        
+        final int RUNNERS = 4;
+        ExecutorService es = Executors.newFixedThreadPool(RUNNERS);
+        final int LOOPS = 1000;
+        Runnable tester = new Runnable() {
+            
+            public void run() {
+                for(int i = 0; i < LOOPS; i++) {
+                    assertTrue(rg.contains(10, 10));
+                    assertFalse(rg.contains(-10, -10));
+                    
+                    assertTrue(rg.contains(10, 10, 10, 10));
+                    assertFalse(rg.contains(-50, -50, 10, 10));
+                }
+            }
+        };
+        List<Future> futures = new ArrayList<Future>();
+        for (int i = 0; i < RUNNERS; i++) {
+            Future<?> future = es.submit(tester);
+            futures.add(future);
+        }
+        for (Future future : futures) {
+            future.get();
+        }
     }
     
     /**
